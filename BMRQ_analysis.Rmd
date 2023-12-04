@@ -1,0 +1,281 @@
+---
+title: "BMRQ_analysis"
+author: "Nicole"
+date: "6/22/2020"
+output: html_document
+___
+```{r setup, include=FALSE}
+
+# Log
+# NOTE THAT ONLY THE LAST TWO COMPARITIVE GRAPHS HAVE COMPLETELY UPDATED CODE, 8/10/2020 - NP
+# Added bmrq_dataframe section, cleaned up code for all plots 8/17/2020 - PT
+
+# NOTSE
+# Response.ID is the participant ID given by qualtircs
+# id which is inputted by participants manually
+# Before.you.begin..please.turn.off.any.distractions..e.g...phone..email..music..etc...Thank.you..Please.enter.your.Prolific.ID. %in% youngerThan61 is the prolific ID
+
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(RColorBrewer)
+library(ggplot2)
+source("C:/Users/pagea/OneDrive/Documents/SynchronyGamma/R_rainclouds.R")
+#source("D:/R/RainCloudPlots-master/RainCloudPlots-master/tutorial_R/R_rainclouds.R")
+
+# Libraries for ANOVA
+library(emmeans)
+library(car)
+
+#setwd("C:/Users/pagea/OneDrive/Documents/SynchronyGamma")
+setwd("D:/SynchronyGamma/QualtricsSurveys/QualtricsSurveys")
+getwd()
+
+filename <- "BMRQ_preprocessed.csv"
+
+
+```
+
+## Process data frame
+
+```{r bmrq_dataframe}
+
+#load in data, select only relevant columns
+df <- read.csv(filename)
+
+#delete rows that don't represent actual subjects
+# df_younger <- df_younger[-c(2, 3, 4, 21, 31, 37), ]
+# df_older <- df_older[-c(45), ]
+
+# test participants that should be removed
+testPart <- c("MATTTEST", "PTTEST" , "test", "test2") 
+
+# Older participants who are younger that n 60
+youngerThan50 <- c("5dcea7314d51e4107516c80d", "5eb2bffa2f51de04d4f35219")
+ youngerThan61 <- c("5d9373b0e04970001ab482da", "5dcea7314d51e4107516c80d", "5eb2bffa2f51de04d4f35219", "5ea72425eedc9e0e2f9ea747", "5c32331c70d93a00012338fd" , "5b6bacf00afa6f000107210f", "5be781ca3b047e0001a39e47")
+ 
+ # Create new Type variable for Younger + Older Adults
+df <- mutate(df, Type.Collapse = word(df$Type, 1))
+
+# Remove these participants
+df <- df %>% filter(!(id %in% testPart)) # %>%
+   # filter(!(Before.you.begin..please.turn.off.any.distractions..e.g...phone..email..music..etc...Thank.you..Please.enter.your.Prolific.ID. %in% youngerThan61)) %>%
+   # filter(!(Before.you.begin..please.turn.off.any.distractions..e.g...phone..email..music..etc...Thank.you..Please.enter.your.Prolific.ID. %in% youngerThan50))
+
+# BMRQ data
+data <- df %>% select("Response.ID", "Type","Type.Collapse", "BMRQ_emotion":"BMRQ_socialreward", "BMRQ_total")
+#convert data from long to wide format
+data_long_sub <- data %>% select("Response.ID", "Type","Type.Collapse", "BMRQ_emotion":"BMRQ_socialreward") %>%
+                  pivot_longer(cols =  "BMRQ_emotion":"BMRQ_socialreward" , names_to = "Category", values_to = "Score") # subscales
+data_long_total <- data %>% select("Response.ID", "Type", "Type.Collapse", "BMRQ_total") %>%
+                  pivot_longer(cols =  "BMRQ_total", names_to = "Category", values_to = "Score") # total scores
+
+# Create factors
+data_long_sub$Category <- factor(data_long_sub$Category, 
+levels = c("BMRQ_emotion","BMRQ_sensorimotor", "BMRQ_moodreg", "BMRQ_musicseek", "BMRQ_socialreward"),
+labels = c("Emotion" , "Sensorimotor" , "Mood Regulation" , "Music Seeking" , "Social Reward"))
+data_long_sub$Type <- factor(data_long_sub$Type, levels = c("Younger Adults - PsyLink (Spring)",  "Younger Adults - Prolific", "Older Adults - Prolific", "Younger Adults - PsyLink (Fall)" ))
+data_long_total$Type <- factor(data_long_total$Type, levels = c("Younger Adults - PsyLink (Spring)",  "Younger Adults - Prolific", "Older Adults - Prolific", "Younger Adults - PsyLink (Fall)"))
+
+```
+
+
+## Younger Adults (Psylink and Prolific) - Boxplots for subscales
+   
+```{r bmrq_ya_psylink_prolific_sub}
+
+## Younger Adults - PsyLink (Spring and Fall)
+# filter, then define x,y variables
+
+gg <- data_long_sub %>% 
+   filter(Type == "Younger Adults - PsyLink (Spring)" | Type == "Younger Adults - PsyLink (Fall)") %>%
+   #filter(Type == "Younger Adults - PsyLink (Fall)")  %>%
+   ggplot( aes(x = Category, y = Score, fill = Category))
+
+# plot boxplot! tweak to beautify it :)
+gg + geom_boxplot(alpha=0.5) +  scale_x_discrete(name = "Category") + scale_y_continuous(name = "Score") + ggtitle("BMRQ Scores for Younger Adults (PsyLink)") + theme_bw() + theme(plot.title = element_text(hjust = 0.5)) +
+ theme(plot.title = element_text(size = 14, family = "Tahoma", face = "bold"),
+              text = element_text(size = 12, family = "Tahoma"),
+              axis.title = element_text(face="bold"),
+              axis.text.x=element_text(size = 11),
+              legend.position = "right") + geom_jitter(size=1.5, width=0.15)
+              
+# Now, plot groups in their own separate plot
+gg <- data_long_sub %>% 
+   filter(Type == "Younger Adults - PsyLink (Spring)" | Type == "Younger Adults - PsyLink (Fall)") %>%
+   #filter(Type == "Younger Adults - PsyLink (Fall)")  %>%
+   ggplot( aes(x = Category, y = Score, fill = Category))
+# plot boxplot! tweak to beautify it :)
+gg + facet_grid(cols = vars(Type)) +
+geom_boxplot(alpha=0.5) +  scale_x_discrete(name = "Category") + scale_y_continuous(name = "Score") + ggtitle("BMRQ Scores for Younger Adults (PsyLink Spring and Fall)") + theme_bw() + theme(plot.title = element_text(hjust = 0.5)) +
+ theme(plot.title = element_text(size = 14, family = "Tahoma", face = "bold"),
+              text = element_text(size = 12, family = "Tahoma"),
+              axis.title = element_text(face="bold"),
+              axis.text.x=element_text(size = 11),
+              legend.position = "right") + geom_jitter(size=1.5, width=0.15)
+              
+              
+## Younger Adults - Prolific              
+# filter, then define x,y variables
+gg <- data_long_sub %>% 
+   filter(Type == "Younger Adults - Prolific") %>%
+   ggplot(aes(x = Category, y = Score, fill = Category))
+
+# plot boxplot! tweak to beautify it :)
+gg + geom_boxplot(alpha=0.5) +  scale_x_discrete(name = "Category") + scale_y_continuous(name = "Score") + ggtitle("BMRQ Scores for Younger Adults (Prolific)") + theme_bw() + theme(plot.title = element_text(hjust = 0.5)) +
+ theme(plot.title = element_text(size = 14, family = "Tahoma", face = "bold"),
+              text = element_text(size = 12, family = "Tahoma"),
+              axis.title = element_text(face="bold"),
+              axis.text.x=element_text(size = 11),
+              legend.position = "right") + geom_jitter(size=1.5, width=0.15)
+
+
+```
+   
+
+##  Older Adults (Prolific) - Boxplots for Subscales
+   
+```{r bmrq_oa_prolific}
+
+# define x,y variables
+gg <- data_long_sub %>% 
+   filter( Type == "Older Adults - Prolific") %>%
+   ggplot( aes(x = Category, y = Score, fill = Category))
+
+# plot boxplot! tweak to beautify it :)
+gg + geom_boxplot(alpha=0.5) +  scale_x_discrete(name = "Category") + scale_y_continuous(name = "Score") + ggtitle("BMRQ Scores for Older Adults (Prolific)") + theme_bw() + theme(plot.title = element_text(hjust = 0.5)) +
+ theme(plot.title = element_text(size = 14, family = "Tahoma", face = "bold"),
+              text = element_text(size = 12, family = "Tahoma"),
+              axis.title = element_text(face="bold"),
+              axis.text.x=element_text(size = 11),
+              legend.position = "right") + geom_jitter(size=1.5, width=0.15)
+
+
+```
+   
+## BMRQ Subscales Across All Ages
+
+```{r all_types_subscores_bmrq}
+
+## NOT TYPE COLLAPSED
+
+# define x,y variables
+gg <- data_long_sub %>% 
+   ggplot( aes(x = Category, y = Score, fill = Category))
+
+# plot boxplot! tweak to beautify it :)
+gg + geom_boxplot(alpha=0.5) + facet_grid(cols = vars(Type)) + scale_x_discrete(name = "Category") + scale_y_continuous(name = "Score") + ggtitle("BMRQ Scores for Older Adults (Prolific)") + theme_bw() + theme(plot.title = element_text(hjust = 0.5)) +
+ theme(plot.title = element_text(size = 14, family = "Tahoma", face = "bold"),
+              text = element_text(size = 7, family = "Tahoma"),
+              legend.position = "right", axis.text.x = element_blank(), axis.ticks = element_blank()) + geom_jitter(size=1.5, width=0.15)
+
+## TYPE COLLAPSED 
+
+gg <- ggplot(data_long_sub, aes(x = Category, y = Score, fill = Type.Collapse))
+
+gg + geom_boxplot(alpha=0.75, outlier.size = 0.85) + #geom_jitter(size=0.75, width=0.15, alpha = 0.35) + 
+   scale_x_discrete(name = "") + scale_y_continuous(name = "Score") + ggtitle("BMRQ Subscales") + labs(fill = "Group", color = "Group") +
+   theme_bw() + 
+   theme(plot.title = element_text(size = 12, hjust = 0.5, face="bold"), 
+         strip.text = element_text(size = 7),
+         axis.text = element_text(size = 8),
+         legend.position = "right",
+         legend.title = element_text(size = 7),
+         legend.text = element_text(size = 7))
+
+```
+
+   
+## Younger and Older - Total BMRQ Scores
+
+```{r all_types_total_bmrq}
+
+# define x,y variables
+gg <- ggplot(data_long_total, aes(x = Category, y = Score, fill = Type))
+
+# plot boxplot! tweak to beautify it :)
+gg + geom_boxplot()  + scale_y_continuous(name = "Total Score") + ggtitle("BMRQ Total Scores") + theme_bw() + theme(plot.title = element_text(hjust = 0.5)) +
+ theme(plot.title = element_text(size = 14, family = "Tahoma", face = "bold"),text = element_text(size = 12, family = "Tahoma"),axis.title = element_text(),axis.text.x=element_text(size = 11),
+legend.position = "right") + theme(axis.title.x=element_blank()) +
+scale_fill_brewer(palette = "Accent")
+
+
+#+geom_jitter(size=1.7, width=0.15)
+
+
+## TOTAL SCORES TYPE COLLAPSED
+
+# define x,y variables
+gg <- ggplot(data_long_total, aes(x = Type.Collapse, y = Score, fill = Type.Collapse))
+
+# plot boxplot! tweak to beautify it :)
+
+gg  + geom_boxplot(width = 0.1, position = position_nudge(x = -.2, y = 0), alpha=0.35, outlier.size = 0.75, outlier.shape = NA) +  
+labs(fill = "Type") +
+   geom_flat_violin(aes(fill = Type.Collapse), position = position_nudge(x = .1, y = 0), adjust = 1.5, trim = FALSE, alpha = .5, colour = NA) +    geom_jitter(size=1, alpha = 0.35, width = 0.05) + 
+   scale_x_discrete(name = "") + scale_y_continuous(name = "Score") + ggtitle("BMRQ Total Score") + theme_bw() + 
+   theme(plot.title = element_text(size = 12, hjust = 0.5, face="bold"), 
+         axis.text.x=element_blank(),
+         axis.ticks = element_blank(),
+         strip.text = element_text(size = 7),
+         legend.position = "right",
+         legend.title = element_text(size = 7),
+         legend.text = element_text(size = 7))
+
+
+```
+   
+
+## Tests for older vs younger total scores
+
+```{r t.tests}
+
+# Prolific participants
+t.test.data <- df %>% select("Type", "BMRQ_total") %>%
+    filter(Type == "Younger Adults - Prolific" | Type == "Older Adults - Prolific")
+
+t.test(BMRQ_total ~ Type, data = t.test.data)
+
+
+# Psy link vs. Prolific participants
+t.test.data <- df %>% select("Type", "BMRQ_total") %>%
+    filter(Type == "Younger Adults - PsyLink" | Type == "Older Adults - Prolific")
+
+t.test(BMRQ_total ~ Type, data = t.test.data)
+
+# Younger vs older adults (all)
+t.test.data <- data %>% select("Type.Collapse", "BMRQ_total") %>%
+    filter(Type.Collapse == "Younger" | Type.Collapse == "Older")
+
+t.test(BMRQ_total ~ Type.Collapse, data = t.test.data)
+
+
+# One-way ANOVA
+#Perform the Shapiro-Wilk Test for Normality on each group
+data_long_total %>%
+  group_by(Type) %>%
+  summarise(`W Stat` = shapiro.test(Score)$statistic,
+            `p-value` = shapiro.test(Score)$p.value)
+
+m1 <-lm(Score ~ Type, data=data_long_total, contrasts = c("contr.helmert", "contr.poly"))
+summary(m1)
+Anova(m1, type=3)
+ 
+#Compute expected marginal means post-hoc tests
+emmeans(m1, pairwise ~ Type, adjust="tukey")
+ 
+
+```
+   
+# MANOVA for sub-categories
+
+```{r manova}
+
+bmrq.manova <- manova(cbind(BMRQ_emotion,BMRQ_sensorimotor, BMRQ_moodreg, BMRQ_musicseek, BMRQ_socialreward) ~ Type, data = data)
+summary(bmrq.manova)
+summary.aov(bmrq.manova)
+
+
+```
+
+
