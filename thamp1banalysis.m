@@ -24,6 +24,7 @@ for i=1:length(d)
     if string(realID) == id
         out1 = sname;
         a_real = a;
+        d(i).name
     end
 end
 out1
@@ -102,7 +103,7 @@ if group == 1
         total = total + table1unmod(l);
     end
     avg_unmod_reaction = total / length(table1unmod)
-    std_mod = std(table1unmod)
+    std_unmod = std(table1unmod)
 
 
 end
