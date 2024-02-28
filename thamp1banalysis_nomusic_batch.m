@@ -1,26 +1,219 @@
-%In progress on jakobs local machine
-% will process all 400 online subjects and include time sensitive
-% performance analysis
-
 clear
 clc
 
-id_list = [1 2 3]; % enter list of all 400 subject ids which are the prolific ids
+savefigures = 0; %set to 1 or 0 to save plots or not for
+windowsize = 10;
+figure;
+
+%open the text file with all the approved prolific ids
+path = "/Users/Kob/Documents/MINDLab/THAMP/thamp 1b/thamp 1b data/participant_list.txt";
+fileID = fopen(path, 'r');
+
+data_cell = textscan(fileID, '%s', 'Delimiter', '\n');
+data = data_cell{1};
+
+%extra ids of participants who got the bonus payment and still wanted to
+%complete the survey again
+extra_ids = {'63852498bcb698988baa11c2',...
+'5a78b8355292b800012284ca',...
+'5df89cab69a117620a70f1ee',...
+'6470f0a74d3e8cc83f27be31',...
+'61bb392e40db417c1a138dcb',...
+'5c1c2c51e2d9150001b5737e',...
+'659a0d020c80c3b946e05be7'};
+
+%id_list = [data;extra_ids];
+id_list = data;
+
+%simple qualtrics data, just ids and group/song order, no survey data (
+path2 = "/Users/Kob/Documents/MINDLab/THAMP/thamp 1b/thamp 1b data/simple_qualtrics_data_2_9";
+q_data = readtable("/Users/Kob/Documents/MINDLab/THAMP/thamp 1b/thamp 1b data/simple_qualtrics_data_2_9");
+
+%full qualtrics data
+path3 = "/Users/Kob/Documents/MINDLab/THAMP/thamp 1b/thamp 1b data/THAMP_Qualtrics_2_9";
+full_data = readtable("/Users/Kob/Documents/MINDLab/THAMP/thamp 1b/thamp 1b data/THAMP_Qualtrics_2_9");
+
+%%
+% will process all 400 online subjects and include time sensitive
+% performance analysis
 
 %import qualtrics data and obtain group number from corresponding prolific
 %id
 %put all the survey/experiment data from psytoolkit in the same date folder
 
-qualtrics_data = [1 2;
-    1 2];
+%for each entry in id_list calc each thing and add a new row of
+%final_results
+%final_results = [1 avg_mod_reaction std_mod std_mod/avg_mod_reaction avg_unmod_reaction std_unmod std_unmod/avg_unmod_reaction avg_nomusic_reaction std_nomusic_nm std_nomusic_nm/avg_nomusic_reaction 1 1 nb1 nb2 nb3];
+   
+final_results_all = [];
+final_results_asrs = [];
+final_results_all_like = [];
+final_results_all_fam = [];
+id_error_list = []; %out2 empty error
+id_error_list2 = []; %table1mod empty error
+id_error_list3 = []; %table2mod empty error
+id_error_list4 = []; %table1mod empty error line 161
+id_error_list5 = []; %table1unmod empty error line 161
     
-for i = 1:length(id_list)    
-    %loop through all of the ids and for each 
+for h = 1:length(id_list)    
+    %loop through all of the ids and for each calc all desired metrics for
+    %sart and nback
+    id = id_list{h};
+    
+    %subject ids that are throwing errors here (non out2 errors)
+    %628bb has empty table1mod
+    %655fd1c has empty table1mod
+%     if strcmp(id,'628bbe2c0f8080e6985e8592') || strcmp(id,'655fd1c6919a4ddb98818eae')
+%         x=8
+%         continue;
+%     end
 
-    id = string(id_list(i));
-    group = qualtrics_data(i,2); %change this probably ***
+    %within each id, loop through qualtrics data
+    for j = 1:height(q_data)
+        %7 is prolific id, 8 is group 1 or 2, 9 is song order 1-5
+        if strcmp(id_list{h},string(q_data{j,7}))
+            group = q_data{j,8};
+            triplet = q_data{j,9};
+        end
+    end
 
-    date = '1_29';
+    for j = 1:height(full_data)
+        %328 total columns
+        %prolific id is column 38
+        %song 1 fam is 114
+        %song 1 like is 115
+        %song 2 fam is 120
+        %song 2 like is 121 ... etc up to 32
+        % 126, 127
+
+        %ars is kt - lk (306 - 323)
+        if strcmp(id_list{h},string(full_data{j,38}))
+            position = j;
+        end
+    end
+    
+    columns = [114, 115, 120, 121, 126, 127, 132, 133, 138, 139, 144, 145, 150, 151, 156, 157,...
+    162, 163, 168, 169, 174, 175, 180, 181, 186, 187, 192, 193, 198, 199, 204, 205,...
+    210, 211, 216, 217, 222, 223, 228, 229, 234, 235, 240, 241, 246, 247, 252, 253,...
+    258, 259, 264, 265, 270, 271, 276, 277, 282, 283, 288, 289, 294, 295, 300, 301];
+    liking_fam = full_data{position,columns};
+    current_asrs = full_data{position, 306:323};
+    fam = fliplr(liking_fam(:, 1:2:end)); %flip the matrix left to right 
+    liking = fliplr(liking_fam(:, 2:2:end));
+
+    %asrs ranking
+    asrs_final = 1; %past threshold or not, then sum them into final_asrs if == 1
+
+
+    if triplet == 1, songref = [19	17	13	9	2	4	26	22	27	10	3	25; ...
+        18	14	8	24	23	21	1	7	20	30	5	16]; end
+    if triplet == 2, songref = [26	22	27	10	3	25	18	14	8	24	23	21; ...
+        1	7	20	30	5	16	29	11	31	32	12	28]; end
+    if triplet == 3, songref = [18	14	8	24	23	21	1	7	20	30	5	16; ...
+        29	11	31	32	12	28	19	17	13	9	2	4]; end
+    if triplet == 4, songref = [1	7	20	30	5	16	29	11	31	32	12	28; ...
+        19	17	13	9	2	4	26	22	27	10	3	25]; end
+    if triplet == 5, songref = [29	11	31	32	12	28	19	17	13	9	2	4; ...
+        26	22	27	10	3	25	18	14	8	24	23	21]; end
+    if group == 2
+        mod = {'U' 'U' 'U' 'M' 'M' 'M' 'U' 'U' 'U' 'M' 'M' 'M'};
+    elseif group == 1
+        mod = {'M' 'M' 'M' 'U' 'U' 'U' 'M' 'M' 'M' 'U' 'U' 'U'};
+    end
+    songlist_sart = songref(1,:);
+    songlist_nback = songref(2,:);
+
+    like_sart = [liking(songlist_sart(1)),liking(songlist_sart(2)),liking(songlist_sart(3)),...
+    liking(songlist_sart(4)),liking(songlist_sart(5)),liking(songlist_sart(6)),...
+    liking(songlist_sart(7)),liking(songlist_sart(8)),liking(songlist_sart(9)),...
+    liking(songlist_sart(10)),liking(songlist_sart(11)),liking(songlist_sart(12))];
+
+    like_nback = [liking(songlist_nback(1)),liking(songlist_nback(2)),liking(songlist_nback(3)),...
+    liking(songlist_nback(4)),liking(songlist_nback(5)),liking(songlist_nback(6)),...
+    liking(songlist_nback(7)),liking(songlist_nback(8)),liking(songlist_nback(9)),...
+    liking(songlist_nback(10)),liking(songlist_nback(11)),liking(songlist_nback(12))];
+
+    fam_sart = [fam(songlist_sart(1)),fam(songlist_sart(2)),fam(songlist_sart(3)),...
+    fam(songlist_sart(4)),fam(songlist_sart(5)),fam(songlist_sart(6)),...
+    fam(songlist_sart(7)),fam(songlist_sart(8)),fam(songlist_sart(9)),...
+    fam(songlist_sart(10)),fam(songlist_sart(11)),fam(songlist_sart(12))];
+
+    fam_nback = [fam(songlist_nback(1)),fam(songlist_nback(2)),fam(songlist_nback(3)),...
+    fam(songlist_nback(4)),fam(songlist_nback(5)),fam(songlist_nback(6)),...
+    fam(songlist_nback(7)),fam(songlist_nback(8)),fam(songlist_nback(9)),...
+    fam(songlist_nback(10)),fam(songlist_nback(11)),fam(songlist_nback(12))];
+
+    %SART, 12 songs grouped by order heard, 1-12
+    sart_modfam = [];
+    sart_unmodfam = [];
+    sart_modunfam = [];
+    sart_unmodunfam = [];
+    sart_modlike = [];
+    sart_unmodlike = [];
+    sart_modunlike = [];
+    sart_unmodunlike = [];
+    
+    for j = 1:12
+        %familiarity
+        if fam_sart(j) > 2 && mod{j} == 'M'
+            sart_modfam = [sart_modfam j];
+        elseif fam_sart(j) > 2 && mod{j} == 'U'
+            sart_unmodfam = [sart_unmodfam j];
+        elseif fam_sart(j) <= 2 && mod{j} == 'M'
+            sart_modunfam = [sart_modunfam j];
+        elseif fam_sart(j) <= 2 && mod{j} == 'U'
+            sart_unmodunfam = [sart_unmodunfam j];
+        end
+        %liking
+        if like_sart(j) > 2 && mod{j} == 'M'
+            sart_modlike = [sart_modlike j];
+        elseif like_sart(j) > 2 && mod{j} == 'U'
+            sart_unmodlike = [sart_unmodlike j];
+        elseif like_sart(j) <= 2 && mod{j} == 'M'
+            sart_modunlike = [sart_modunlike j];
+        elseif like_sart(j) <= 2 && mod{j} == 'U'
+            sart_unmodunlike = [sart_unmodunlike j];
+        end
+    end
+
+ 
+    %NBACK
+    nback_modfam = [];
+    nback_unmodfam = [];
+    nback_modunfam = [];
+    nback_unmodunfam = [];
+    nback_modlike = [];
+    nback_unmodlike = [];
+    nback_modunlike = [];
+    nback_unmodunlike = [];
+
+    for j = 1:12
+        % familiarity
+        if fam_nback(j) > 2 && mod{j} == 'M'
+            nback_modfam = [nback_modfam j];
+        elseif fam_nback(j) > 2 && mod{j} == 'U'
+            nback_unmodfam = [nback_unmodfam j];
+        elseif fam_nback(j) <= 2 && mod{j} == 'M'
+            nback_modunfam = [nback_modunfam j];
+        elseif fam_nback(j) <= 2 && mod{j} == 'U'
+            nback_unmodunfam = [nback_unmodunfam j];
+        end
+        % liking
+        if like_nback(j) > 2 && mod{j} == 'M'
+            nback_modlike = [nback_modlike j];
+        elseif like_nback(j) > 2 && mod{j} == 'U'
+            nback_unmodlike = [nback_unmodlike j];
+        elseif like_nback(j) <= 2 && mod{j} == 'M'
+            nback_modunlike = [nback_modunlike j];
+        elseif like_nback(j) <= 2 && mod{j} == 'U'
+            nback_unmodunlike = [nback_unmodunlike j];
+        end
+    end
+
+
+
+
+    date = '2_9';
     gd = append(string(group),' ',date);
     %search through each survey data txt for prolific id
     pathsurvey = append('/Users/Kob/Documents/MINDLab/THAMP/thamp 1b/thamp 1b data/group', gd,'/survey_data');
@@ -29,20 +222,24 @@ for i = 1:length(id_list)
     d(1) = [];
     d(1) = [];
     d(1) = [];
-    for i=1:length(d)
-        name = d(i).name;
+    for k=1:length(d)
+        name = d(k).name;
         sname = split(name,'-');
         sname = split(sname(5),'.');
         sname = sname(1);
         a = readtable( append(pathsurvey,'/',string(name)) );
-        realID = a{20,2};
+        if height(a) >= 20
+            realID = a{20,2};
+        else
+            continue;
+        end
         if string(realID) == id
             out1 = sname;
             a_real = a;
-            d(i).name
+            d(k).name
         end
     end
-    out1
+    out1;
      
     %save the end of survey data txt file name
     %find the two matching txt files in experiment data
@@ -52,8 +249,8 @@ for i = 1:length(id_list)
     d2(1) = [];
     d2(1) = [];
     out2 = [];
-    for i=1:length(d2)
-        name2 = d2(i).name;
+    for k=1:length(d2)
+        name2 = d2(k).name;
         sname2 = split(name2,'-');
         sname2 = split(sname2(8),'.');
         sname2 = sname2(1);
@@ -63,6 +260,13 @@ for i = 1:length(id_list)
         end
     end
     out2;
+
+    %if out2 is empty then save the problem id and continue
+    if isempty(out2)
+        id_error_list = [id_error_list;id];
+        continue;
+    end
+
     out2 = split(out2,'+'); %use out2{2} for NBACK and out2{3} for SART
     
     %maybe here is where you would be able to split into FOUR groups for nback,
@@ -70,6 +274,7 @@ for i = 1:length(id_list)
     %maybe?: out2{2} out2{3} out2{4} out2{5}
     
     %%
+    %SART
     %take sart file and extract reaction time column
     %plot average reaction time for unmodded compared to modded SART
     sart = readtable( append(pathexp,'/',string(out2{5})) );
@@ -80,6 +285,15 @@ for i = 1:length(id_list)
     table1unmod = [];
     table2mod = [];
     table2unmod = [];
+    table_modlike = [];
+    table_unmodlike = [];
+    table_modunlike = [];
+    table_unmodunlike = [];
+    table_modfam = [];
+    table_unmodfam = [];
+    table_modunfam = [];
+    table_unmodunfam = [];
+
     if group == 1
         for i = 1:height(sart)
             if ~strcmp(char(sart{i,1}),'training') && (sart{i,2} == 3 ||sart{i,2} == 4||sart{i,2} == 5||sart{i,2} == 9||sart{i,2} == 10||sart{i,2} == 11)
@@ -101,28 +315,56 @@ for i = 1:length(id_list)
             end
         end
     
+        if isempty(table1mod)
+            id_error_list4 = [id_error_list4;id];
+            continue;
+        end
+
+        if isempty(table1unmod)
+            id_error_list5 = [id_error_list5;id];
+            continue;
+        end
+
         table1mod = table2array(table1mod);
         table1unmod = table2array(table1unmod);
-        figure(1)
-        plot(table1mod)
-        title('MODDED REACTION TIME')
-        ylabel('Reaction Time (ms)')
-        figure(2)
-        plot(table1unmod)
-        title('UNMODDED REACTION TIME')
-        ylabel('Reaction Time (ms)')
+%         figure(1)
+%         plot(table1mod)
+%         title('MODDED REACTION TIME')
+%         ylabel('Reaction Time (ms)')
+%         figure(2)
+%         plot(table1unmod)
+%         title('UNMODDED REACTION TIME')
+%         ylabel('Reaction Time (ms)')
+
+%SART response time plot
+% loop through the sart variablea column 10
+%         for p = 1:length(sart)
+%             %rt = sart{p,10}
+%         end
+        rt_rolling = movstd(sart{:,10},windowsize);
+        subplot(2,2,1);
+        plot(rt_rolling);
+        xlabel('Trials')
+        ylabel('Std Dev (ms)')
+        title('SART (Modded First) Rolling Window Std Dev of Response Times')
+        xlim([1, length(rt_rolling)]);
+        line([mean(xlim), mean(xlim)], ylim, 'Color', 'r', 'LineStyle', '--');
+        line([mean(xlim), mean(xlim)]/2, ylim, 'Color', 'r', 'LineStyle', '--');
+        line([mean(xlim), mean(xlim)]*(3/2), ylim, 'Color', 'r', 'LineStyle', '--');
+
+
         total = 0;
         for l = 1:length(table1mod)
             total = total + table1mod(l);
         end
-        avg_mod_reaction = total / length(table1mod)
-        std_mod = std(table1mod)
+        avg_mod_reaction = total / length(table1mod);
+        std_mod = std(table1mod);
         total = 0;
         for l = 1:length(table1unmod)
             total = total + table1unmod(l);
         end
-        avg_unmod_reaction = total / length(table1unmod)
-        std_unmod = std(table1unmod)
+        avg_unmod_reaction = total / length(table1unmod);
+        std_unmod = std(table1unmod);
     
     
     end
@@ -138,30 +380,125 @@ for i = 1:length(id_list)
                     table2mod = [table2mod;sart(i,10)];
                 end
             end
+            
         end
+
+        if isempty(table2mod)
+            id_error_list3 = [id_error_list3;id];
+            continue;
+        end
+        
         table2mod = table2array(table2mod);
         table2unmod = table2array(table2unmod);
-        figure(1)
-        plot(table2mod)
-        title('MODDED REACTION TIME')
-        ylabel('Reaction Time (ms)')
-        figure(2)
-        plot(table2unmod)
-        title('UNMODDED REACTION TIME')
-        ylabel('Reaction Time (ms)')
+%         figure(1)
+%         plot(table2mod)
+%         title('MODDED REACTION TIME')
+%         ylabel('Reaction Time (ms)')
+%         figure(2)
+%         plot(table2unmod)
+%         title('UNMODDED REACTION TIME')
+%         ylabel('Reaction Time (ms)')
+
+%SART response time plot
+% loop through the sart variablea column 10
+        rt_rolling = movstd(sart{:,10},windowsize);
+        subplot(2,2,1);
+        plot(rt_rolling);
+        xlabel('Trials')
+        ylabel('Std Dev (ms)')
+        title('SART (Unmodded First) Rolling Window Std Dev of Response Times')
+        xlim([1, length(rt_rolling)]);
+        line([mean(xlim), mean(xlim)], ylim, 'Color', 'r', 'LineStyle', '--');
+        line([mean(xlim), mean(xlim)]/2, ylim, 'Color', 'r', 'LineStyle', '--');
+        line([mean(xlim), mean(xlim)]*(3/2), ylim, 'Color', 'r', 'LineStyle', '--');
+
         total = 0;
         for l = 1:length(table2mod)
             total = total + table2mod(l);
         end
-        avg_mod_reaction = total / length(table2mod)
-        std_mod = std(table2mod)
+        avg_mod_reaction = total / length(table2mod);
+        std_mod = std(table2mod);
         total = 0;
         for l = 1:length(table2unmod)
             total = total + table2unmod(l);
         end
-        avg_unmod_reaction = total / length(table2unmod)
-        std_unmod = std(table2unmod)
+        avg_unmod_reaction = total / length(table2unmod);
+        std_unmod = std(table2unmod);
     end
+
+    %same analysis as group 1 and group 2 but for liked and fam categories
+    for i = 1:height(sart)
+            %LIKED + modded 
+        if ~isempty(sart_modlike)
+        if ~strcmp(char(sart{i,1}),'training') && any(sart{i,2},sart_modlike+2)
+            if sart{i,4} ~= 3 && sart{i,7} == 3
+                table_modlike = [table_modlike;sart(i,10)];
+            end
+        end
+        end
+        
+        %liked + unmodded
+        if ~isempty(sart_unmodlike)
+        if ~strcmp(char(sart{i,1}), 'training') && any(sart{i,2},sart_unmodlike+2)
+            if sart{i,4} ~= 3 && sart{i,7} == 3
+                table_unmodlike = [table_unmodlike;sart(i,10)];
+            end
+        end
+        end
+    
+        %FAMILIAR  + modded
+        if ~isempty(sart_modfam)
+        if ~strcmp(char(sart{i,1}),'training') && any(sart{i,2},sart_modfam+2)
+            if sart{i,4} ~= 3 && sart{i,7} == 3
+                table_modfam = [table_modfam;sart(i,10)];
+            end
+        end
+        end
+        %familiar + unmodded
+        if ~isempty(sart_unmodfam)
+        if ~strcmp(char(sart{i,1}), 'training') && any(sart{i,2},sart_unmodfam+2)
+            if sart{i,4} ~= 3 && sart{i,7} == 3
+                table_unmodfam = [table_unmodfam;sart(i,10)];
+            end
+        end  
+        end
+    end
+    if ~isempty(table_modlike),table_modlike = table2array(table_modlike); end
+    if ~isempty(table_unmodlike),table_unmodlike = table2array(table_unmodlike); end
+    if ~isempty(table_modfam),table_modfam = table2array(table_modfam); end
+    if ~isempty(table_unmodfam),table_unmodfam = table2array(table_unmodfam); end
+   
+    %liked
+    total = 0;
+    for l = 1:length(table_modlike)
+        total = total + table_modlike(l);
+    end
+    avg_modlike_reaction = total / length(table_modlike);
+    std_modlike = std(table_modlike);
+    total = 0;
+    for l = 1:length(table_unmodlike)
+        total = total + table_unmodlike(l);
+    end
+    avg_unmodlike_reaction = total / length(table_unmodlike);
+    std_unmodlike = std(table_unmodlike);
+    
+    %familiar
+    total = 0;
+    for l = 1:length(table_modfam)
+        total = total + table_modfam(l);
+    end
+    avg_modfam_reaction = total / length(table_modfam);
+    std_modfam = std(table_modfam);
+    total = 0;
+    for l = 1:length(table_unmodfam)
+        total = total + table_unmodfam(l);
+    end
+    avg_unmodfam_reaction = total / length(table_unmodfam);
+    std_unmodfam = std(table_unmodfam);
+
+    %TO DO NEXT: gather up the fam and like results into their own variable
+    %grade asrs and gather that
+    %put all in spreadsheet
     
     
     %%
@@ -233,6 +570,11 @@ for i = 1:length(id_list)
     mod2 = [];
     unmod1 = [];
     unmod2 = [];
+    modlike = [];
+    unmodlike = [];
+    modfam = [];
+    unmodfam = [];
+
     if group == 1
         for i = 1:height(nback_u)
             if nback_u{i,2} == 3 ||nback_u{i,2} == 4||nback_u{i,2} == 5||nback_u{i,2} == 9||nback_u{i,2} == 10||nback_u{i,2} == 11
@@ -249,8 +591,8 @@ for i = 1:length(id_list)
                 correct = correct + 1;
             end
         end
-        disp('CORRECT PERCENTAGE MOD NBACK = ') 
-        disp(correct/height(mod1))
+        %disp('CORRECT PERCENTAGE MOD NBACK = ') 
+        %disp(correct/height(mod1))
         nb1 = correct/height(mod1);
         %PERCENT CORRECT CALC unmod group 1
         correct = 0;
@@ -260,9 +602,22 @@ for i = 1:length(id_list)
             end
         end
         
-        disp('CORRECT PERCENTAGE UNMOD NBACK = ')
-        disp(correct/height(unmod1))
+        %disp('CORRECT PERCENTAGE UNMOD NBACK = ')
+        %disp(correct/height(unmod1))
         nb2 = correct/height(unmod1);
+
+        %NBACK MODDED RESPONSE TIME PLOTS
+        %loop through nback_u and use nback_u{i,5} for RT
+        rt_rolling = movstd(nback_u{:,5},windowsize);
+        subplot(2,2,2);
+        plot(rt_rolling);
+        xlabel('Trials')
+        ylabel('Std Dev (ms)')
+        title('NBACK (Modded First) Rolling Window Std Dev of Response Times')
+        xlim([1, length(rt_rolling)]);
+        line([mean(xlim), mean(xlim)], ylim, 'Color', 'r', 'LineStyle', '--');
+        line([mean(xlim), mean(xlim)]/2, ylim, 'Color', 'r', 'LineStyle', '--');
+        line([mean(xlim), mean(xlim)]*(3/2), ylim, 'Color', 'r', 'LineStyle', '--');
     end
     
     if group == 2
@@ -281,8 +636,8 @@ for i = 1:length(id_list)
                 correct = correct + 1;
             end
         end
-        disp('CORRECT PERCENTAGE MOD NBACK = ')
-        disp(correct/height(mod2))
+        %disp('CORRECT PERCENTAGE MOD NBACK = ')
+        %disp(correct/height(mod2))
         nb1 = correct/height(mod2);
         %PERCENT CORRECT CALC unmod group 2
         correct = 0;
@@ -291,10 +646,94 @@ for i = 1:length(id_list)
                 correct = correct + 1;
             end
         end
-        disp('CORRECT PERCENTAGE UNMOD NBACK = ')
-        disp(correct/height(unmod2))
+        %disp('CORRECT PERCENTAGE UNMOD NBACK = ')
+        %disp(correct/height(unmod2))
         nb2 = correct/height(unmod2);
+
+        %NBACK MODDED RESPONSE TIME PLOTS
+        %loop through nback_u and use nback_u{i,5} for RT
+        rt_rolling = movstd(nback_u{:,5},windowsize);
+        subplot(2,2,2);
+        plot(rt_rolling);
+        xlabel('Trials')
+        ylabel('Std Dev (ms)')
+        title('NBACK (Unodded First) Rolling Window Std Dev of Response Times')
+        xlim([1, length(rt_rolling)]);
+        line([mean(xlim), mean(xlim)], ylim, 'Color', 'r', 'LineStyle', '--');
+        line([mean(xlim), mean(xlim)]/2, ylim, 'Color', 'r', 'LineStyle', '--');
+        line([mean(xlim), mean(xlim)]*(3/2), ylim, 'Color', 'r', 'LineStyle', '--');
     end
+
+    %liking and fam results for nback
+    for i = 1:height(nback_u)
+        %liked modded
+        if ~isempty(nback_modlike)
+            if any(nback_u{i,2},nback_modlike+2)
+            modlike = [modlike;nback_u(i,9)];
+            end
+        end
+        %liked unmodded
+        if ~isempty(nback_unmodlike)
+        if any(nback_u{i,2},nback_unmodlike+2)
+            unmodlike = [unmodlike;nback_u(i,9)];
+        end
+        end
+        %familiar modded
+        if ~isempty(nback_modfam)
+        if any(nback_u{i,2},nback_modfam+2)
+            modfam = [modfam;nback_u(i,9)];
+        end
+        end
+        %familiar unmodded
+        if ~isempty(nback_unmodfam)
+        if any(nback_u{i,2},nback_unmodfam+2)
+            unmodfam = [unmodfam;nback_u(i,9)];
+        end
+        end
+    end
+        
+        %correctness for liking modded and unmodded
+        correct = 0;
+        for k = 1:height(modlike)
+            if modlike{k,1} == 1 || modlike{k,1} == 4
+                correct = correct + 1;
+            end
+        end
+        %disp('CORRECT PERCENTAGE MOD NBACK = ') 
+        %disp(correct/height(modlike))
+        nb1_like = correct/height(modlike);
+        %PERCENT CORRECT CALC unmod group 1
+        correct = 0;
+        for k = 1:height(unmodlike)
+            if unmodlike{k,1} == 1 || unmodlike{k,1} == 4
+                correct = correct + 1;
+            end
+        end
+        %disp('CORRECT PERCENTAGE UNMOD NBACK = ')
+        %disp(correct/height(unmodlike))
+        nb2_like = correct/height(unmodlike);
+
+        %correctness for familiar modded and unmodded
+        correct = 0;
+        for k = 1:height(modfam)
+            if modfam{k,1} == 1 || modfam{k,1} == 4
+                correct = correct + 1;
+            end
+        end
+        %disp('CORRECT PERCENTAGE MOD NBACK = ') 
+        %disp(correct/height(modfam))
+        nb1_fam = correct/height(modfam);
+        %PERCENT CORRECT CALC unmod group 1
+        correct = 0;
+        for k = 1:height(unmodlike)
+            if unmodlike{k,1} == 1 || unmodlike{k,1} == 4
+                correct = correct + 1;
+            end
+        end
+        %disp('CORRECT PERCENTAGE UNMOD NBACK = ')
+        %disp(correct/height(unmodlike))
+        nb2_fam = correct/height(unmodlike);
+        
     
     %%
     % SART NO MUSIC
@@ -322,19 +761,33 @@ for i = 1:length(id_list)
                 %mistake?
             end
         end
+
+        if isempty(table1mod)
+            id_error_list2 = [id_error_list2;id];
+            continue;
+        end
     
         table1mod = table2array(table1mod);
         %table1unmod = table2array(table1unmod);
-        figure(3)
-        plot(table1mod)
-        title('NO MUSIC REACTION TIME')
-        ylabel('Reaction Time (ms)')
+%         figure(3)
+%         plot(table1mod)
+%         title('NO MUSIC REACTION TIME')
+%         ylabel('Reaction Time (ms)')  
+        
+        %loop through table1mod for sart nm RT
+        rt_rolling = movstd(sart{:,10},windowsize);
+        subplot(2,2,3);
+        plot(rt_rolling);
+        xlabel('Trials')
+        ylabel('Std Dev (ms)')
+        title('SART (No Music) Rolling Window Std Dev of Response Times')
+
         total = 0;
         for l = 1:length(table1mod)
             total = total + table1mod(l);
         end
-        avg_nomusic_reaction = total / length(table1mod)
-        std_nomusic_nm = std(table1mod)
+        avg_nomusic_reaction = total / length(table1mod);
+        std_nomusic_nm = std(table1mod);
     
     
     
@@ -416,11 +869,68 @@ for i = 1:length(id_list)
                 correct = correct + 1;
             end
         end
-        disp('CORRECT PERCENTAGE NO MUSIC NBACK = ') 
-        disp(correct/height(mod1))
+        %disp('CORRECT PERCENTAGE NO MUSIC NBACK = ') 
+        %disp(correct/height(mod1))
         nb3 = correct/height(mod1);
+
+        %no music nback response time figure
+        %loop through nback_u and use nback_u{i,5} for RT
+        rt_rolling = movstd(nback_u{:,5},windowsize);
+        subplot(2,2,4);
+        plot(rt_rolling);
+        title('NBACK (No Music) Rolling Window Std Dev of Response Times')
         
     
-    final_results = [1 avg_mod_reaction std_mod std_mod/avg_mod_reaction avg_unmod_reaction std_unmod std_unmod/avg_unmod_reaction avg_nomusic_reaction std_nomusic_nm std_nomusic_nm/avg_nomusic_reaction 1 1 nb1 nb2 nb3];
-    openvar('final_results')
+    %ASRS grading
+    %ars is kt - lk (306 - 323)
+    asrs = full_data{position,306:323};
+
+    %check if columns 1,2,3,4,5,6 are shaded darkly
+    count = 0;
+    if strcmp(asrs{1}, 'Sometimes') || strcmp(asrs{1}, 'Often') || strcmp(asrs{1}, 'Very Often')
+        count = count + 1;
+    end
+    if strcmp(asrs{2}, 'Sometimes') || strcmp(asrs{2}, 'Often') || strcmp(asrs{2}, 'Very Often')    
+        count = count + 1;
+    end    
+    if strcmp(asrs{3}, 'Sometimes') || strcmp(asrs{3}, 'Often') || strcmp(asrs{3}, 'Very Often')    
+        count = count + 1;
+    end    
+    if strcmp(asrs{4}, 'Often') || strcmp(asrs{4}, 'Very Often')   
+        count = count + 1;
+    end    
+    if strcmp(asrs{5}, 'Often') || strcmp(asrs{5}, 'Very Often')   
+        count = count + 1;
+    end    
+    if strcmp(asrs{6}, 'Often') || strcmp(asrs{6}, 'Very Often')   
+        count = count + 1;
+    end
+
+    if count >= 4
+        asrs_final = 1;
+    else
+        asrs_final = 0;
+    end
+
+
+    %gathering final results    
+    final_results = {string(id) group triplet 1 avg_mod_reaction std_mod std_mod/avg_mod_reaction avg_unmod_reaction std_unmod std_unmod/avg_unmod_reaction avg_nomusic_reaction std_nomusic_nm std_nomusic_nm/avg_nomusic_reaction 1 1 nb1 nb2 nb3};
+    if asrs_final == 1
+        final_results_asrs = [final_results_asrs;final_results];
+    end
+    final_results_all = [final_results_all;final_results];
+   
+    final_results_like = {string(id) group triplet 1 avg_modlike_reaction std_modlike std_modlike/avg_modlike_reaction avg_unmodlike_reaction std_unmodlike std_unmodlike/avg_unmodlike_reaction 1 1 nb1 nb2 nb1_like nb2_like};
+    final_results_fam = {string(id) group triplet 1 avg_modfam_reaction std_modfam std_modfam/avg_modfam_reaction avg_unmodfam_reaction std_unmodfam std_unmodfam/avg_unmodfam_reaction 1 1 nb1 nb2 nb1_fam nb2_fam};
+
+    final_results_all_like = [final_results_all_like;final_results_like];
+    final_results_all_fam = [final_results_all_fam;final_results_fam];
+
+    
+    sgtitle(id);
+    if savefigures == 1
+        saveas(gcf, strcat(id,'.fig'));
+    end
 end
+
+openvar('final_results_all')
