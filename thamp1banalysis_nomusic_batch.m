@@ -1,8 +1,8 @@
 clear
 clc
 
-savefigures = 0; %set to 1 or 0 to save plots or not for
-windowsize = 10;
+savefigures = 1; %set to 1 or 0 to save plots or not for
+windowsize = 20;
 figure;
 
 %open the text file with all the approved prolific ids
@@ -341,8 +341,9 @@ for h = 1:length(id_list)
 %         for p = 1:length(sart)
 %             %rt = sart{p,10}
 %         end
-        rt_rolling = movstd(sart{:,10},windowsize);
-        subplot(2,2,1);
+        filtered_sart = sart(sart{:,10} ~= max(sart{:,10}),:); %removes all rows that have max RT (no button was pressed)
+        rt_rolling = movstd(filtered_sart{:,10},windowsize);
+        subplot(1,2,1);
         plot(rt_rolling);
         xlabel('Trials')
         ylabel('Std Dev (ms)')
@@ -401,8 +402,9 @@ for h = 1:length(id_list)
 
 %SART response time plot
 % loop through the sart variablea column 10
-        rt_rolling = movstd(sart{:,10},windowsize);
-        subplot(2,2,1);
+        filtered_sart = sart(sart{:,10} ~= max(sart{:,10}),:); %removes all rows that have max RT (no button was pressed)
+        rt_rolling = movstd(filtered_sart{:,10},windowsize);
+        subplot(1,2,1);
         plot(rt_rolling);
         xlabel('Trials')
         ylabel('Std Dev (ms)')
@@ -608,16 +610,16 @@ for h = 1:length(id_list)
 
         %NBACK MODDED RESPONSE TIME PLOTS
         %loop through nback_u and use nback_u{i,5} for RT
-        rt_rolling = movstd(nback_u{:,5},windowsize);
-        subplot(2,2,2);
-        plot(rt_rolling);
-        xlabel('Trials')
-        ylabel('Std Dev (ms)')
-        title('NBACK (Modded First) Rolling Window Std Dev of Response Times')
-        xlim([1, length(rt_rolling)]);
-        line([mean(xlim), mean(xlim)], ylim, 'Color', 'r', 'LineStyle', '--');
-        line([mean(xlim), mean(xlim)]/2, ylim, 'Color', 'r', 'LineStyle', '--');
-        line([mean(xlim), mean(xlim)]*(3/2), ylim, 'Color', 'r', 'LineStyle', '--');
+%         rt_rolling = movstd(nback_u{:,5},windowsize);
+%         subplot(2,2,2);
+%         plot(rt_rolling);
+%         xlabel('Trials')
+%         ylabel('Std Dev (ms)')
+%         title('NBACK (Modded First) Rolling Window Std Dev of Response Times')
+%         xlim([1, length(rt_rolling)]);
+%         line([mean(xlim), mean(xlim)], ylim, 'Color', 'r', 'LineStyle', '--');
+%         line([mean(xlim), mean(xlim)]/2, ylim, 'Color', 'r', 'LineStyle', '--');
+%         line([mean(xlim), mean(xlim)]*(3/2), ylim, 'Color', 'r', 'LineStyle', '--');
     end
     
     if group == 2
@@ -652,16 +654,16 @@ for h = 1:length(id_list)
 
         %NBACK MODDED RESPONSE TIME PLOTS
         %loop through nback_u and use nback_u{i,5} for RT
-        rt_rolling = movstd(nback_u{:,5},windowsize);
-        subplot(2,2,2);
-        plot(rt_rolling);
-        xlabel('Trials')
-        ylabel('Std Dev (ms)')
-        title('NBACK (Unodded First) Rolling Window Std Dev of Response Times')
-        xlim([1, length(rt_rolling)]);
-        line([mean(xlim), mean(xlim)], ylim, 'Color', 'r', 'LineStyle', '--');
-        line([mean(xlim), mean(xlim)]/2, ylim, 'Color', 'r', 'LineStyle', '--');
-        line([mean(xlim), mean(xlim)]*(3/2), ylim, 'Color', 'r', 'LineStyle', '--');
+%         rt_rolling = movstd(nback_u{:,5},windowsize);
+%         subplot(2,2,2);
+%         plot(rt_rolling);
+%         xlabel('Trials')
+%         ylabel('Std Dev (ms)')
+%         title('NBACK (Unodded First) Rolling Window Std Dev of Response Times')
+%         xlim([1, length(rt_rolling)]);
+%         line([mean(xlim), mean(xlim)], ylim, 'Color', 'r', 'LineStyle', '--');
+%         line([mean(xlim), mean(xlim)]/2, ylim, 'Color', 'r', 'LineStyle', '--');
+%         line([mean(xlim), mean(xlim)]*(3/2), ylim, 'Color', 'r', 'LineStyle', '--');
     end
 
     %liking and fam results for nback
@@ -775,8 +777,9 @@ for h = 1:length(id_list)
 %         ylabel('Reaction Time (ms)')  
         
         %loop through table1mod for sart nm RT
-        rt_rolling = movstd(sart{:,10},windowsize);
-        subplot(2,2,3);
+        filtered_sart = sart(sart{:,10} ~= max(sart{:,10}),:);
+        rt_rolling = movstd(filtered_sart{:,10},windowsize);
+        subplot(1,2,2);
         plot(rt_rolling);
         xlabel('Trials')
         ylabel('Std Dev (ms)')
@@ -875,10 +878,10 @@ for h = 1:length(id_list)
 
         %no music nback response time figure
         %loop through nback_u and use nback_u{i,5} for RT
-        rt_rolling = movstd(nback_u{:,5},windowsize);
-        subplot(2,2,4);
-        plot(rt_rolling);
-        title('NBACK (No Music) Rolling Window Std Dev of Response Times')
+%         rt_rolling = movstd(nback_u{:,5},windowsize);
+%         subplot(2,2,4);
+%         plot(rt_rolling);
+%         title('NBACK (No Music) Rolling Window Std Dev of Response Times')
         
     
     %ASRS grading
