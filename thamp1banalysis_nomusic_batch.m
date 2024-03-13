@@ -1,7 +1,7 @@
 clear
 clc
 
-savefigures = 1; %set to 1 or 0 to save plots or not for
+savefigures = 0; %set to 1 or 0 to save plots or not for
 windowsize = 20;
 figure;
 
@@ -47,6 +47,9 @@ full_data = readtable("/Users/Kob/Documents/MINDLab/THAMP/thamp 1b/thamp 1b data
    
 final_results_all = [];
 final_results_asrs = [];
+final_results_asrs0 = [];
+final_results_mus = [];
+final_results_mus0 = [];
 final_results_all_like = [];
 final_results_all_fam = [];
 id_error_list = []; %out2 empty error
@@ -343,11 +346,12 @@ for h = 1:length(id_list)
 %         end
         filtered_sart = sart(sart{:,10} ~= max(sart{:,10}),:); %removes all rows that have max RT (no button was pressed)
         rt_rolling = movstd(filtered_sart{:,10},windowsize);
-        subplot(1,2,1);
-        plot(rt_rolling);
+        rt_rolling_avg = movmean(filtered_sart{:,10},windowsize);
+        subplot(2,1,1);
+        plot(rt_rolling/rt_rolling_avg);
         xlabel('Trials')
-        ylabel('Std Dev (ms)')
-        title('SART (Modded First) Rolling Window Std Dev of Response Times')
+        ylabel('RT CV')
+        title('SART (Modded First) Rolling Window CV of Response Times')
         xlim([1, length(rt_rolling)]);
         line([mean(xlim), mean(xlim)], ylim, 'Color', 'r', 'LineStyle', '--');
         line([mean(xlim), mean(xlim)]/2, ylim, 'Color', 'r', 'LineStyle', '--');
@@ -404,11 +408,12 @@ for h = 1:length(id_list)
 % loop through the sart variablea column 10
         filtered_sart = sart(sart{:,10} ~= max(sart{:,10}),:); %removes all rows that have max RT (no button was pressed)
         rt_rolling = movstd(filtered_sart{:,10},windowsize);
-        subplot(1,2,1);
-        plot(rt_rolling);
+        rt_rolling_avg = movmean(filtered_sart{:,10},windowsize);
+        subplot(2,1,1);
+        plot(rt_rolling/rt_rolling_avg);
         xlabel('Trials')
-        ylabel('Std Dev (ms)')
-        title('SART (Unmodded First) Rolling Window Std Dev of Response Times')
+        ylabel('RT CV')
+        title('SART (Unmodded First) Rolling Window CV of Response Times')
         xlim([1, length(rt_rolling)]);
         line([mean(xlim), mean(xlim)], ylim, 'Color', 'r', 'LineStyle', '--');
         line([mean(xlim), mean(xlim)]/2, ylim, 'Color', 'r', 'LineStyle', '--');
@@ -779,11 +784,12 @@ for h = 1:length(id_list)
         %loop through table1mod for sart nm RT
         filtered_sart = sart(sart{:,10} ~= max(sart{:,10}),:);
         rt_rolling = movstd(filtered_sart{:,10},windowsize);
-        subplot(1,2,2);
-        plot(rt_rolling);
+        rt_rolling_avg = movmean(filtered_sart{:,10},windowsize);
+        subplot(2,1,2);
+        plot(rt_rolling/rt_rolling_avg);
         xlabel('Trials')
-        ylabel('Std Dev (ms)')
-        title('SART (No Music) Rolling Window Std Dev of Response Times')
+        ylabel('RT CV')
+        title('SART (No Music) Rolling Window CV of Response Times')
 
         total = 0;
         for l = 1:length(table1mod)
@@ -916,11 +922,35 @@ for h = 1:length(id_list)
     end
 
 
+    %MUSIC LISTENING HABITS
+    %row 324
+    mushabit = full_data{position,324};
+    if strcmp(mushabit{1},'Often') || strcmp(mushabit{1},'Usually')
+        muscheck = 1;
+    end
+    if strcmp(mushabit{1},'Never') || strcmp(mushabit{1},'Seldom')
+        muscheck = 0;
+    end
+
+
     %gathering final results    
     final_results = {string(id) group triplet 1 avg_mod_reaction std_mod std_mod/avg_mod_reaction avg_unmod_reaction std_unmod std_unmod/avg_unmod_reaction avg_nomusic_reaction std_nomusic_nm std_nomusic_nm/avg_nomusic_reaction 1 1 nb1 nb2 nb3};
     if asrs_final == 1
         final_results_asrs = [final_results_asrs;final_results];
     end
+
+    if asrs_final == 0
+        final_results_asrs0 = [final_results_asrs0;final_results];
+    end
+
+    if muscheck == 1
+        final_results_mus = [final_results_mus;final_results];
+    end
+
+    if muscheck == 0
+        final_results_mus0 = [final_results_mus0;final_results];
+    end
+
     final_results_all = [final_results_all;final_results];
    
     final_results_like = {string(id) group triplet 1 avg_modlike_reaction std_modlike std_modlike/avg_modlike_reaction avg_unmodlike_reaction std_unmodlike std_unmodlike/avg_unmodlike_reaction 1 1 nb1 nb2 nb1_like nb2_like};
@@ -933,6 +963,7 @@ for h = 1:length(id_list)
     sgtitle(id);
     if savefigures == 1
         saveas(gcf, strcat(id,'.fig'));
+        saveas(gcf, strcat(id,'.png'));
     end
 end
 
